@@ -1,40 +1,24 @@
 import streamlit as st
-import json
 import asyncio
-from agents import Tool, RunResult  # assuming your custom agents setup
-from backend import ShoppingAgent  # import your agent class
+from agents import create_shopping_agent
+from connection import config
+from agents import Runner
 
-st.set_page_config(page_title="Voice to JSON Agent", page_icon="🛒", layout="centered")
+st.set_page_config(page_title="🛍️ Gemini Shopping Assistant", layout="centered")
 
-st.title("🛍️ Voice to JSON Shopping Agent")
-st.write("Speak or type your order naturally (e.g., _'menu ek joota neelay rang da aur ek kilo doodh'_).")
+st.title("🛍️ Gemini Shopping Assistant")
+st.caption("Powered by Gemini + Agents SDK")
 
-# Input
-user_input = st.text_area("🗣️ Enter your order", placeholder="menu ek joota neelay rang da aur ek kilo doodh")
+user_input = st.text_input("What would you like to buy?", placeholder="e.g. 2 red Nike shoes size 42")
 
-# Run Agent
-if st.button("🔍 Extract Items"):
+if st.button("Submit"):
     if not user_input.strip():
-        st.warning("Please enter an order text first.")
+        st.warning("Please enter something first.")
     else:
-        with st.spinner("Processing your request..."):
-            try:
-                # Run your agent asynchronously
-                async def run_agent():
-                    agent = ShoppingAgent(name="Shopping Agent")
-                    result: RunResult = await agent.run(user_input)
-                    return result
+        agent = create_shopping_agent()
 
-                # Execute event loop safely
-                result = asyncio.run(run_agent())
+        with st.spinner("🧠 Understanding your request..."):
+            result = asyncio.run(Runner.run(agent, input=user_input, run_config=config))
 
-                # Display structured JSON
-                st.subheader("🧾 Extracted JSON Output")
-                st.json(result.final_output if isinstance(result.final_output, dict) else result.final_output)
-
-                # Optionally show intermediate details
-                with st.expander("🔍 Agent Details"):
-                    st.write(result)
-
-            except Exception as e:
-                st.error(f"❌ Error: {str(e)}")
+        st.success("✅ Extracted Shopping Info")
+        st.json(result.output_text if hasattr(result, "output_text") else str(result))
